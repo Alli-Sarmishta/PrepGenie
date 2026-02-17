@@ -54,3 +54,29 @@ export const interviewAPI = {
   updateStatus: (id: string, status: string) =>
     api.patch(`/interviews/${id}/status`, { status }),
 };
+
+// Resume API
+export interface ResumeAnalysis {
+  score: number;
+  strengths: string[];
+  weaknesses: string[];
+  grammarSuggestions: string[];
+  atsTips: string[];
+  improvements: string[];
+}
+
+export const resumeAPI = {
+  analyze: (file: File, onProgress?: (percent: number) => void) => {
+    const formData = new FormData();
+    formData.append('resume', file);
+    return api.post<{ analysis: ResumeAnalysis }>('/resume/analyze', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+      onUploadProgress: (progressEvent) => {
+        if (onProgress && progressEvent.total) {
+          const percent = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+          onProgress(percent);
+        }
+      },
+    });
+  },
+};

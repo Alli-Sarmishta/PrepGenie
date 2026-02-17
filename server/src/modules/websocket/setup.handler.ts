@@ -1,5 +1,6 @@
 import { WebSocket } from 'ws';
 import { textToSpeech } from '../ai/audio.service.js';
+import { validateAndExtractSetupAnswer } from '../ai/gpt.service.js';
 
 interface InterviewSession {
   interviewId: string;
@@ -17,63 +18,8 @@ interface InterviewSession {
     numberOfQuestions?: number;
   };
   lastQuestion?: string;
+  lastSetupQuestion?: string; // Store the last question asked for context
 }
-
-// Helper function to extract job role from natural language
-const extractJobRole = (response: string): string => {
-  const cleaned = response
-    .toLowerCase()
-    .replace(/^(hi|hello|hey|yes|yeah|sure|okay|ok|um|uh)[,\s]*/gi, '')
-    .replace(/i'm\s+interviewing\s+for\s+(a|an|the)\s+/gi, '')
-    .replace(/i'm\s+interviewing\s+for\s+/gi, '')
-    .replace(/i\s+want\s+to\s+be\s+(a|an|the)\s+/gi, '')
-    .replace(/i\s+want\s+to\s+be\s+/gi, '')
-    .replace(/i'm\s+(a|an|the)\s+/gi, '')
-    .replace(/i'm\s+/gi, '')
-    .replace(/^(a|an|the)\s+/gi, '')
-    .replace(/\s+position$/gi, '')
-    .replace(/\s+role$/gi, '')
-    .replace(/\.+$/g, '')
-    .trim();
-  
-  // Capitalize first letter of each word
-  return cleaned
-    .split(' ')
-    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-    .join(' ');
-};
-
-// Helper function to extract interview type
-const extractInterviewType = (response: string): string => {
-  const lower = response.toLowerCase();
-  
-  if (lower.includes('technical') && !lower.includes('non')) {
-    return 'Technical';
-  } else if (lower.includes('non-technical') || lower.includes('non technical')) {
-    return 'Non-Technical';
-  } else if (lower.includes('mixed') || lower.includes('both')) {
-    return 'Mixed';
-  }
-  
-  // Default to Technical if unclear
-  return 'Technical';
-};
-
-// Helper function to extract experience level
-const extractExperienceLevel = (response: string): string => {
-  const lower = response.toLowerCase();
-  
-  if (lower.includes('entry') || lower.includes('junior') || lower.includes('beginner') || lower.includes('fresher')) {
-    return 'Entry';
-  } else if (lower.includes('mid') || lower.includes('intermediate') || lower.includes('middle')) {
-    return 'Mid';
-  } else if (lower.includes('senior') || lower.includes('lead') || lower.includes('expert') || lower.includes('advanced')) {
-    return 'Senior';
-  }
-  
-  // Default to Mid if unclear
-  return 'Mid';
-};
 
 const sendAIMessage = async (ws: WebSocket, text: string) => {
   const timestamp = new Date().toISOString();
@@ -112,87 +58,117 @@ export const handleSetupResponse = async (
   console.log(`\n[${timestamp}] 🎯 SETUP RESPONSE: Phase=${session.setupPhase}, Response="${userResponse}"`);
   
   let nextMessage = '';
+  let validationResult;
 
   switch (session.setupPhase) {
     case 'role':
-      const jobRole = extractJobRole(userResponse);
-      console.log(`[${timestamp}] 📝 Raw response: "${userResponse}"`);
-      console.log(`[${timestamp}] 📝 Extracted job role: "${jobRole}"`);
+      // Use GPT to validate and extract job role
+      validationResult = await validateAndExtractSetupAnswer(
+        session.lastSetupQuestion || "What job role are you interviewing for?",
+        userResponse,
+        'jobRole'
+      );
       
-      if (!jobRole || jobRole.length < 2) {
-        nextMessage = `I didn't catch that. What job role are you interviewing for? For example, Frontend Developer, Data Analyst, or Product Manager.`;
-        break;
+      console.log(`[${timestamp}] 📝 Validation result:`, validationResult);
+      
+      if (!validationResult.isValid || validationResult.clarificationNeeded) {
+        nextMessage = validationResult.clarificationQuestion!;
+        // Don't advance the phase, ask again
+      } else {
+        session.setupData.jobRole = validationResult.extractedValue as string;
+        session.setupPhase = 'type';
+        nextMessage = validationResult.conversationalResponse! + 
+          " Now, what type of interview would you like? Please say Technical, Non-Technical, or Mixed.";
+        session.lastSetupQuestion = "What type of interview would you like?";
       }
-      
-      session.setupData.jobRole = jobRole;
-      session.setupPhase = 'type';
-      nextMessage = `Great! You're interviewing for a ${jobRole} position. Now, what type of interview would you like? Please say Technical, Non-Technical, or Mixed.`;
       break;
 
     case 'type':
-      const interviewType = extractInterviewType(userResponse);
-      console.log(`[${timestamp}] 📝 Raw response: "${userResponse}"`);
-      console.log(`[${timestamp}] 📝 Extracted interview type: "${interviewType}"`);
+      validationResult = await validateAndExtractSetupAnswer(
+        session.lastSetupQuestion || "What type of interview would you like?",
+        userResponse,
+        'interviewType'
+      );
       
-      session.setupData.interviewType = interviewType;
-      session.setupPhase = 'techStack';
-      nextMessage = `Perfect! This will be a ${interviewType} interview. What technologies or tech stack should I focus on? You can mention multiple technologies.`;
+      console.log(`[${timestamp}] 📝 Validation result:`, validationResult);
+      
+      if (!validationResult.isValid || validationResult.clarificationNeeded) {
+        nextMessage = validationResult.clarificationQuestion!;
+      } else {
+        session.setupData.interviewType = validationResult.extractedValue as string;
+        session.setupPhase = 'techStack';
+        nextMessage = validationResult.conversationalResponse! + 
+          " What technologies or tech stack should I focus on? You can mention multiple technologies.";
+        session.lastSetupQuestion = "What technologies should I focus on?";
+      }
       break;
 
     case 'techStack':
-      // Parse tech stack from response - extract only technology names
-      // Remove common filler words and focus on actual tech names
-      const cleanedResponse = userResponse
-        .toLowerCase()
-        .replace(/yeah|yes|sure|okay|ok|can you|please|focus on|i want|i'd like/gi, '')
-        .trim();
+      validationResult = await validateAndExtractSetupAnswer(
+        session.lastSetupQuestion || "What technologies should I focus on?",
+        userResponse,
+        'techStack'
+      );
       
-      const techStack = cleanedResponse
-        .split(/,|\sand\s|\sor\s/)
-        .map(t => t.trim())
-        .filter(t => t.length > 1 && !/^(a|an|the|on|in|at|to|for)$/i.test(t));
+      console.log(`[${timestamp}] 📝 Validation result:`, validationResult);
       
-      session.setupData.techStack = techStack;
-      session.setupPhase = 'experience';
-      
-      if (techStack.length > 0) {
-        // Capitalize first letter of each tech for better presentation
-        const formattedTech = techStack.map(t => 
-          t.charAt(0).toUpperCase() + t.slice(1)
-        );
-        nextMessage = `Got it! I'll focus on ${formattedTech.join(', ')}. What is your experience level? Please say Entry level, Mid level, or Senior level.`;
+      if (!validationResult.isValid || validationResult.clarificationNeeded) {
+        nextMessage = validationResult.clarificationQuestion!;
       } else {
-        nextMessage = `Understood. What is your experience level? Please say Entry level, Mid level, or Senior level.`;
+        session.setupData.techStack = validationResult.extractedValue as string[];
+        session.setupPhase = 'experience';
+        nextMessage = validationResult.conversationalResponse! + 
+          " What is your experience level? Please say Entry level, Mid level, or Senior level.";
+        session.lastSetupQuestion = "What is your experience level?";
       }
       break;
 
     case 'experience':
-      const experienceLevel = extractExperienceLevel(userResponse);
-      console.log(`[${timestamp}] 📝 Raw response: "${userResponse}"`);
-      console.log(`[${timestamp}] 📝 Extracted experience level: "${experienceLevel}"`);
+      validationResult = await validateAndExtractSetupAnswer(
+        session.lastSetupQuestion || "What is your experience level?",
+        userResponse,
+        'experienceLevel'
+      );
       
-      session.setupData.experienceLevel = experienceLevel;
-      session.setupPhase = 'questions';
-      nextMessage = `Excellent! You're at ${experienceLevel} level. Finally, how many questions would you like? Please say a number between 3 and 10.`;
+      console.log(`[${timestamp}] 📝 Validation result:`, validationResult);
+      
+      if (!validationResult.isValid || validationResult.clarificationNeeded) {
+        nextMessage = validationResult.clarificationQuestion!;
+      } else {
+        session.setupData.experienceLevel = validationResult.extractedValue as string;
+        session.setupPhase = 'questions';
+        nextMessage = validationResult.conversationalResponse! + 
+          " Finally, how many questions would you like? Please say a number between 3 and 10.";
+        session.lastSetupQuestion = "How many questions would you like?";
+      }
       break;
 
     case 'questions':
-      // Extract number from response
-      const numbers = userResponse.match(/\d+/);
-      let numQuestions = numbers ? parseInt(numbers[0]) : 5;
-      numQuestions = Math.max(3, Math.min(10, numQuestions)); // Clamp between 3-10
+      validationResult = await validateAndExtractSetupAnswer(
+        session.lastSetupQuestion || "How many questions would you like?",
+        userResponse,
+        'numberOfQuestions'
+      );
       
-      session.setupData.numberOfQuestions = numQuestions;
-      session.setupPhase = 'complete';
+      console.log(`[${timestamp}] 📝 Validation result:`, validationResult);
       
-      nextMessage = `Perfect! I'll prepare ${numQuestions} questions for your ${session.setupData.interviewType} interview for the ${session.setupData.jobRole} position. Give me a moment to generate your personalized questions.`;
-      
-      // Send message first
-      await sendAIMessage(ws, nextMessage);
-      
-      // Now create interview and generate questions
-      await finalizeSetup(ws, session);
-      return;
+      if (!validationResult.isValid || validationResult.clarificationNeeded) {
+        nextMessage = validationResult.clarificationQuestion!;
+      } else {
+        const numQuestions = validationResult.extractedValue as number;
+        session.setupData.numberOfQuestions = numQuestions;
+        session.setupPhase = 'complete';
+        
+        nextMessage = `${validationResult.conversationalResponse} I'll prepare ${numQuestions} questions for your ${session.setupData.interviewType} interview for the ${session.setupData.jobRole} position. Give me a moment to generate your personalized questions.`;
+        
+        // Send message first
+        await sendAIMessage(ws, nextMessage);
+        
+        // Now create interview and generate questions
+        await finalizeSetup(ws, session);
+        return;
+      }
+      break;
 
     default:
       nextMessage = 'I didn\'t understand that. Could you please repeat?';

@@ -44,7 +44,7 @@ export const usePushToTalkRecording = ({
   }, []);
 
   // Start recording (call when user presses button/spacebar)
-  const startRecording = useCallback(() => {
+  const startRecording = useCallback(async () => {
     const timestamp = new Date().toISOString();
     
     if (!streamRef.current) {
@@ -58,6 +58,37 @@ export const usePushToTalkRecording = ({
     }
 
     try {
+      // Check if the stream is still active
+      const isStreamActive = streamRef.current.active && 
+        streamRef.current.getTracks().some(track => track.readyState === 'live');
+      
+      if (!isStreamActive) {
+        console.warn(`[${timestamp}] ⚠️ Microphone stream inactive, reinitializing...`);
+        
+        // Stop old tracks
+        streamRef.current.getTracks().forEach(track => track.stop());
+        
+        // Reinitialize the microphone
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ 
+            audio: {
+              echoCancellation: true,
+              noiseSuppression: true,
+              autoGainControl: true,
+              sampleRate: 48000,
+              channelCount: 1
+            } 
+          });
+          
+          streamRef.current = stream;
+          console.log(`[${timestamp}] ✅ Microphone reinitialized`);
+        } catch (reinitError) {
+          console.error(`[${timestamp}] ❌ Failed to reinitialize microphone:`, reinitError);
+          setIsInitialized(false);
+          throw reinitError;
+        }
+      }
+      
       console.log(`[${timestamp}] 🎙️ Starting recording...`);
       
       // Setup MediaRecorder

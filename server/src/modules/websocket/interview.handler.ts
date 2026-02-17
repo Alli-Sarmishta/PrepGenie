@@ -28,6 +28,7 @@ interface InterviewSession {
     numberOfQuestions?: number;
   };
   lastQuestion?: string;
+  lastSetupQuestion?: string; // Store the last setup question for context
 }
 
 // Store active sessions (in production, use Redis)
@@ -124,7 +125,8 @@ const handleStartSetup = async (ws: WebSocket, userId: string) => {
     answers: [],
     isSetupPhase: true,
     setupPhase: 'role',
-    setupData: {}
+    setupData: {},
+    lastSetupQuestion: "What job role are you interviewing for?"
   };
   
   sessions.set(sessionId, session);

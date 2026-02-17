@@ -83,8 +83,10 @@ export default function DashboardPage() {
           <p className="text-neutral-600 mt-1">Practice interviews and track your progress</p>
         </div>
 
+        {/* Action Cards Row */}
+        <div className="grid md:grid-cols-2 gap-6 mb-8">
         {/* Create Interview Card */}
-        <div className="card p-8 mb-8 bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200">
+        <div className="card p-8 bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200">
           <div className="flex items-start justify-between">
             <div className="flex-1">
               <h3 className="text-xl font-semibold text-neutral-900 mb-2">Start a new interview</h3>
@@ -109,6 +111,35 @@ export default function DashboardPage() {
               </div>
             </div>
           </div>
+        </div>
+
+        {/* Resume Analyzer Card */}
+        <div
+          onClick={() => navigate('/resume')}
+          className="card p-8 bg-gradient-to-br from-emerald-50 to-teal-50 border-emerald-200 cursor-pointer card-hover"
+        >
+          <div className="flex items-start justify-between">
+            <div className="flex-1">
+              <h3 className="text-xl font-semibold text-neutral-900 mb-2">Resume Analyzer</h3>
+              <p className="text-neutral-600 text-sm mb-6 max-w-lg">
+                Upload your resume and get AI-powered feedback. Improve strengths, fix weaknesses, and optimize for ATS.
+              </p>
+              <Button variant="secondary" size="lg" onClick={(e) => { e.stopPropagation(); navigate('/resume'); }}>
+                <svg className="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                Analyze Resume
+              </Button>
+            </div>
+            <div className="hidden lg:block">
+              <div className="w-32 h-32 bg-emerald-600/10 rounded-2xl flex items-center justify-center">
+                <svg className="w-16 h-16 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+              </div>
+            </div>
+          </div>
+        </div>
         </div>
 
         {/* Past Interviews */}

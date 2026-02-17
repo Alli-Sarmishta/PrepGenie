@@ -19,6 +19,7 @@ interface InterviewSession {
     numberOfQuestions?: number;
   };
   lastQuestion?: string;
+  lastSetupQuestion?: string;
 }
 
 const sendAIMessage = async (ws: WebSocket, text: string) => {
@@ -129,6 +130,8 @@ const completeInterview = async (ws: WebSocket, session: InterviewSession) => {
     // Generate comprehensive feedback
     const feedbackData = await generateFeedback({
       role: session.setupData.jobRole!,
+      interviewType: session.setupData.interviewType,
+      experienceLevel: session.setupData.experienceLevel,
       questions: session.questions,
       answers: session.answers
     });
@@ -226,6 +229,8 @@ export const handleInterviewTermination = async (
     console.log(`[${timestamp}] 🎯 Generating feedback...`);
     const feedbackData = await generateFeedback({
       role: session.setupData.jobRole || 'Unknown Role',
+      interviewType: session.setupData.interviewType,
+      experienceLevel: session.setupData.experienceLevel,
       questions: answeredQuestions,
       answers: answeredResponses
     });
