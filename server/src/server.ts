@@ -6,6 +6,7 @@ import { initWebSocketServer } from './modules/websocket/websocket.server.js';
 import authRoutes from './modules/auth/auth.routes.js';
 import interviewRoutes from './modules/interview/interview.routes.js';
 import resumeRoutes from './modules/resume/resume.routes.js';
+import mcqRoutes from './modules/mcq/mcq.routes.js';
 
 const app = express();
 const PORT = config.server.port;
@@ -27,6 +28,7 @@ app.get('/health', (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/interviews', interviewRoutes);
 app.use('/api/resume', resumeRoutes);
+app.use('/api/mcq', mcqRoutes);
 
 // Create HTTP server
 const server = createServer(app);
