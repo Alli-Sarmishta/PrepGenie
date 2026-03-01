@@ -7,6 +7,7 @@ import VoiceInterviewPage from './features/interview/VoiceInterviewPage';
 import ResultsPage from './features/results/ResultsPage';
 import HistoryPage from './features/history/HistoryPage';
 import ResumeAnalyzerPage from './features/resume/ResumeAnalyzerPage';
+import McqPage from './features/mcq/McqPage';
 
 function App() {
   return (
@@ -18,6 +19,7 @@ function App() {
       <Route path="/results/:id" element={<ProtectedRoute><ResultsPage /></ProtectedRoute>} />
       <Route path="/history" element={<ProtectedRoute><HistoryPage /></ProtectedRoute>} />
       <Route path="/resume" element={<ProtectedRoute><ResumeAnalyzerPage /></ProtectedRoute>} />
+      <Route path="/mcq" element={<ProtectedRoute><McqPage /></ProtectedRoute>} />
       <Route path="/" element={<Navigate to="/dashboard" replace />} />
     </Routes>
   );

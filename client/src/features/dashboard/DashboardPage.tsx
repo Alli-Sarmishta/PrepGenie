@@ -76,75 +76,101 @@ export default function DashboardPage() {
       </header>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-12">
         {/* Welcome Section */}
-        <div className="mb-8">
-          <h2 className="text-3xl font-bold text-neutral-900 tracking-tight">Welcome back, {user?.name}</h2>
-          <p className="text-neutral-600 mt-1">Practice interviews and track your progress</p>
+        <div className="mb-10 sm:mb-12">
+          <h2 className="text-3xl sm:text-4xl font-bold text-neutral-900 tracking-tight">Welcome back, {user?.name}</h2>
+          <p className="text-neutral-600 mt-2 text-base">Practice interviews and track your progress</p>
         </div>
 
-        {/* Action Cards Row */}
-        <div className="grid md:grid-cols-2 gap-6 mb-8">
-        {/* Create Interview Card */}
-        <div className="card p-8 bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200">
-          <div className="flex items-start justify-between">
-            <div className="flex-1">
-              <h3 className="text-xl font-semibold text-neutral-900 mb-2">Start a new interview</h3>
-              <p className="text-neutral-600 text-sm mb-6 max-w-lg">
-                Practice with PrepGenie using voice interaction. Get instant feedback and improve your skills.
-              </p>
-              <Button
-                onClick={() => navigate('/interview/voice')}
-                size="lg"
-              >
-                <svg className="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
-                </svg>
-                Start Voice Interview
-              </Button>
-            </div>
-            <div className="hidden lg:block">
-              <div className="w-32 h-32 bg-blue-600/10 rounded-2xl flex items-center justify-center">
-                <svg className="w-16 h-16 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                </svg>
+        {/* Quick actions section label */}
+        <h3 className="text-sm font-semibold text-neutral-500 uppercase tracking-wider mb-4">Quick actions</h3>
+        <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-6 sm:gap-8 mb-14">
+          {/* Create Interview Card */}
+          <div className="card p-6 sm:p-8 bg-gradient-to-br from-blue-50 to-indigo-50 border-blue-200/80">
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex-1 min-w-0">
+                <h3 className="text-lg font-semibold text-neutral-900 mb-2">Voice Interview</h3>
+                <p className="text-neutral-600 text-sm leading-relaxed mb-5">
+                  Practice with AI using voice. Get instant feedback.
+                </p>
+                <Button onClick={() => navigate('/interview/voice')} size="lg">
+                  <svg className="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                  </svg>
+                  Start Interview
+                </Button>
+              </div>
+              <div className="hidden sm:block flex-shrink-0">
+                <div className="w-14 h-14 sm:w-16 sm:h-16 bg-blue-600/10 rounded-xl flex items-center justify-center">
+                  <svg className="w-8 h-8 sm:w-9 sm:h-9 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                  </svg>
+                </div>
               </div>
             </div>
           </div>
-        </div>
 
-        {/* Resume Analyzer Card */}
-        <div
-          onClick={() => navigate('/resume')}
-          className="card p-8 bg-gradient-to-br from-emerald-50 to-teal-50 border-emerald-200 cursor-pointer card-hover"
-        >
-          <div className="flex items-start justify-between">
-            <div className="flex-1">
-              <h3 className="text-xl font-semibold text-neutral-900 mb-2">Resume Analyzer</h3>
-              <p className="text-neutral-600 text-sm mb-6 max-w-lg">
-                Upload your resume and get AI-powered feedback. Improve strengths, fix weaknesses, and optimize for ATS.
-              </p>
-              <Button variant="secondary" size="lg" onClick={(e) => { e.stopPropagation(); navigate('/resume'); }}>
-                <svg className="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-                Analyze Resume
-              </Button>
-            </div>
-            <div className="hidden lg:block">
-              <div className="w-32 h-32 bg-emerald-600/10 rounded-2xl flex items-center justify-center">
-                <svg className="w-16 h-16 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
+          {/* Resume Analyzer Card */}
+          <div
+            onClick={() => navigate('/resume')}
+            className="card p-6 sm:p-8 bg-gradient-to-br from-emerald-50 to-teal-50 border-emerald-200/80 cursor-pointer card-hover"
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex-1 min-w-0">
+                <h3 className="text-lg font-semibold text-neutral-900 mb-2">Resume Analyzer</h3>
+                <p className="text-neutral-600 text-sm leading-relaxed mb-5">
+                  Upload your resume for AI feedback and ATS tips.
+                </p>
+                <Button variant="secondary" size="lg" onClick={(e) => { e.stopPropagation(); navigate('/resume'); }}>
+                  <svg className="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                  Analyze Resume
+                </Button>
+              </div>
+              <div className="hidden sm:block flex-shrink-0">
+                <div className="w-14 h-14 sm:w-16 sm:h-16 bg-emerald-600/10 rounded-xl flex items-center justify-center">
+                  <svg className="w-8 h-8 sm:w-9 sm:h-9 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                </div>
               </div>
             </div>
           </div>
-        </div>
+
+          {/* MCQ Practice Card */}
+          <div
+            onClick={() => navigate('/mcq')}
+            className="card p-6 sm:p-8 bg-gradient-to-br from-violet-50 to-purple-50 border-violet-200/80 cursor-pointer card-hover md:col-span-2 xl:col-span-1"
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div className="flex-1 min-w-0">
+                <h3 className="text-lg font-semibold text-neutral-900 mb-2">MCQ Practice</h3>
+                <p className="text-neutral-600 text-sm leading-relaxed mb-5">
+                  10 AI questions (aptitude + job-based) with feedback.
+                </p>
+                <Button variant="secondary" size="lg" onClick={(e) => { e.stopPropagation(); navigate('/mcq'); }}>
+                  <svg className="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                  </svg>
+                  Start MCQ Quiz
+                </Button>
+              </div>
+              <div className="hidden sm:block flex-shrink-0">
+                <div className="w-14 h-14 sm:w-16 sm:h-16 bg-violet-600/10 rounded-xl flex items-center justify-center">
+                  <svg className="w-8 h-8 sm:w-9 sm:h-9 text-violet-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+                  </svg>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
         {/* Past Interviews */}
-        <div className="card p-6">
-          <div className="flex items-center justify-between mb-6">
+        <section className="card p-6 sm:p-8" aria-label="Recent interviews">
+          <div className="flex items-center justify-between mb-6 sm:mb-8">
             <h2 className="text-lg font-semibold text-neutral-900">Recent interviews</h2>
             {interviews.length > 0 && (
               <button className="text-sm text-blue-600 hover:text-blue-700 font-medium">
@@ -179,7 +205,7 @@ export default function DashboardPage() {
               <p className="text-sm text-neutral-500 mt-1">Start your first interview to see it here</p>
             </div>
           ) : (
-            <div className="space-y-3">
+            <div className="space-y-2 sm:space-y-3">
               {interviews.map((interview) => (
                 <div
                   key={interview.id}
@@ -190,7 +216,7 @@ export default function DashboardPage() {
                       navigate(`/interview/${interview.id}`);
                     }
                   }}
-                  className="card-hover p-4 cursor-pointer group"
+                  className="card-hover p-4 sm:p-5 rounded-lg cursor-pointer group"
                 >
                   <div className="flex justify-between items-start gap-4">
                     <div className="flex-1 min-w-0">
@@ -235,7 +261,7 @@ export default function DashboardPage() {
               ))}
             </div>
           )}
-        </div>
+        </section>
       </main>
     </div>
   );

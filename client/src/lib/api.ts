@@ -65,6 +65,40 @@ export interface ResumeAnalysis {
   improvements: string[];
 }
 
+// MCQ API
+export interface McqQuestionForClient {
+  question: string;
+  options: string[];
+}
+
+export interface McqGenerateResponse {
+  sessionId: string;
+  questions: McqQuestionForClient[];
+}
+
+export interface McqResultItem {
+  question: string;
+  options: string[];
+  correctIndex: number;
+  userSelected: number;
+  isCorrect: boolean;
+}
+
+export interface McqSubmitResponse {
+  score: number;
+  total: number;
+  correctCount: number;
+  results: McqResultItem[];
+  feedback: string;
+}
+
+export const mcqAPI = {
+  generate: (data: { jobDescription: string; jobTitle?: string }) =>
+    api.post<McqGenerateResponse>('/mcq/generate', data),
+  submit: (data: { sessionId: string; answers: number[] }) =>
+    api.post<McqSubmitResponse>('/mcq/submit', data),
+};
+
 export const resumeAPI = {
   analyze: (file: File, onProgress?: (percent: number) => void) => {
     const formData = new FormData();
