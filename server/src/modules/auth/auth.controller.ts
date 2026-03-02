@@ -6,6 +6,33 @@ import { config } from '../../config/env.js';
 
 const JWT_SECRET = config.jwt.secret;
 
+const PASSWORD_MIN_LENGTH = 6;
+const PASSWORD_REGEX = {
+  uppercase: /[A-Z]/,
+  lowercase: /[a-z]/,
+  number: /[0-9]/,
+  special: /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/,
+};
+
+function validatePassword(password: string): string | null {
+  if (password.length < PASSWORD_MIN_LENGTH) {
+    return `Password must be at least ${PASSWORD_MIN_LENGTH} characters`;
+  }
+  if (!PASSWORD_REGEX.uppercase.test(password)) {
+    return 'Password must contain at least one uppercase letter';
+  }
+  if (!PASSWORD_REGEX.lowercase.test(password)) {
+    return 'Password must contain at least one lowercase letter';
+  }
+  if (!PASSWORD_REGEX.number.test(password)) {
+    return 'Password must contain at least one number';
+  }
+  if (!PASSWORD_REGEX.special.test(password)) {
+    return 'Password must contain at least one special character (!@#$%^&* etc.)';
+  }
+  return null;
+}
+
 // Signup
 export const signup = async (req: Request, res: Response): Promise<void> => {
   try {
@@ -14,6 +41,12 @@ export const signup = async (req: Request, res: Response): Promise<void> => {
     // Validation
     if (!name || !email || !password) {
       res.status(400).json({ error: 'All fields are required' });
+      return;
+    }
+
+    const passwordError = validatePassword(password);
+    if (passwordError) {
+      res.status(400).json({ error: passwordError });
       return;
     }
 

@@ -10,7 +10,7 @@ import Button from '../../components/Button';
 
 export default function VoiceInterviewPage() {
   const navigate = useNavigate();
-  
+
   const [aiSpeaking, setAiSpeaking] = useState(false);
   const [aiText, setAiText] = useState('');
   const [userTranscript, setUserTranscript] = useState('');
@@ -18,403 +18,261 @@ export default function VoiceInterviewPage() {
   const [progress, setProgress] = useState<{ current: number; total: number } | null>(null);
   const [isCompleted, setIsCompleted] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
-  const [status, setStatus] = useState('Connecting...');
+  const [status, setStatus] = useState('Connecting…');
   const [isProcessing, setIsProcessing] = useState(false);
+
   const sessionIdRef = useRef<string | null>(null);
   const hasStartedSetup = useRef(false);
   const audioPlaybackPromiseRef = useRef<Promise<void> | null>(null);
 
   const { playAudio, stopAudio } = useAudioPlayer();
 
-  // Handle WebSocket messages
   const handleWSMessage = useCallback(async (data: any) => {
-    const timestamp = new Date().toISOString();
-    console.log(`\n[${timestamp}] 📥 CLIENT: Received WS message:`, data);
-
+    const ts = new Date().toISOString();
+    console.log(`\n[${ts}] 📥 WS:`, data);
     switch (data.type) {
       case 'AI_SPEAKING':
-        console.log(`[${timestamp}] 🤖 AI_SPEAKING received`);
-        console.log(`[${timestamp}] 📝 Text: "${data.text?.substring(0, 100)}..."`);
-        console.log(`[${timestamp}] 🎵 Has audio: ${!!data.audio}`);
-        console.log(`[${timestamp}] 🆔 SessionId: ${data.sessionId}`);
-        
-        setAiText(data.text);
-        setAiSpeaking(true);
-        setStatus('AI Speaking...');
-        
-        if (data.sessionId) {
-          sessionIdRef.current = data.sessionId;
-          console.log(`[${timestamp}] 💾 Session ID saved: ${data.sessionId}`);
-        }
-        
+        setAiText(data.text); setAiSpeaking(true); setStatus('AI Speaking…');
+        if (data.sessionId) sessionIdRef.current = data.sessionId;
         if (data.audio) {
-          console.log(`[${timestamp}] 🔊 Audio data length: ${data.audio.length} chars`);
           try {
-            console.log(`[${timestamp}] ▶️ Starting audio playback...`);
-            // Store the audio playback promise so we can wait for it later
             audioPlaybackPromiseRef.current = playAudio(data.audio);
             await audioPlaybackPromiseRef.current;
-            console.log(`[${timestamp}] ✅ Audio playback completed`);
             audioPlaybackPromiseRef.current = null;
-            setAiSpeaking(false);
-            setStatus('Listening...');
-          } catch (error) {
-            console.error(`[${timestamp}] ❌ Failed to play audio:`, error);
+            setAiSpeaking(false); setStatus('Listening…');
+          } catch {
             audioPlaybackPromiseRef.current = null;
-            setAiSpeaking(false);
-            setStatus('Listening...');
+            setAiSpeaking(false); setStatus('Listening…');
           }
         } else {
-          console.warn(`[${timestamp}] ⚠️ No audio data in AI_SPEAKING message`);
-          setTimeout(() => {
-            setAiSpeaking(false);
-            setStatus('Listening...');
-          }, 3000);
+          setTimeout(() => { setAiSpeaking(false); setStatus('Listening…'); }, 3000);
         }
         break;
-
       case 'TRANSCRIPT':
-        console.log(`[${timestamp}] 📝 TRANSCRIPT received: ${data.text}`);
-        setUserTranscript(data.text);
-        setIsProcessing(false);
-        setStatus('Waiting for AI response...');
+        setUserTranscript(data.text); setIsProcessing(false); setStatus('Waiting for AI response…');
         break;
-
       case 'QUESTION_PROGRESS':
-        console.log(`[${timestamp}] 📊 Progress: ${data.current}/${data.total}`);
         setProgress({ current: data.current, total: data.total });
         break;
-
       case 'INTERVIEW_COMPLETED':
-        console.log(`[${timestamp}] ✅ Interview completed!`);
-        setInterviewId(data.interviewId);
-        setIsCompleted(true);
-        setStatus('Interview Completed! Please listen to the feedback...');
-        
-        // Stop recording immediately
-        stopRecording();
-        stopWebcam();
-        
-        // Wait for audio to finish, then navigate
+        setInterviewId(data.interviewId); setIsCompleted(true);
+        setStatus('Interview Completed!');
+        stopRecording(); stopWebcam();
         (async () => {
           if (data.interviewId) {
-            console.log(`[${new Date().toISOString()}] ⏳ Waiting for feedback audio to complete...`);
-            
-            // Wait for the audio playback promise to complete
-            if (audioPlaybackPromiseRef.current) {
-              await audioPlaybackPromiseRef.current;
-              console.log(`[${new Date().toISOString()}] ✅ Audio finished playing`);
-            }
-            
-            // Add a 2-second buffer for user to read the completion message
-            await new Promise(resolve => setTimeout(resolve, 2000));
-            
-            console.log(`[${new Date().toISOString()}] ✅ Navigating to results...`);
+            if (audioPlaybackPromiseRef.current) await audioPlaybackPromiseRef.current;
+            await new Promise(r => setTimeout(r, 2000));
             navigate(`/results/${data.interviewId}`);
           }
         })();
         break;
-
       case 'INTERVIEW_TERMINATED':
-        console.log(`[${timestamp}] 🛑 Interview terminated`);
-        setInterviewId(data.interviewId);
-        setIsCompleted(true);
-        setStatus('Interview Ended');
-        
-        // Stop recording immediately
-        stopRecording();
-        stopWebcam();
-        
-        // Wait for audio to finish, then navigate
+        setInterviewId(data.interviewId); setIsCompleted(true); setStatus('Interview Ended');
+        stopRecording(); stopWebcam();
         (async () => {
-          console.log(`[${new Date().toISOString()}] ⏳ Waiting for termination audio to complete...`);
-          
-          // Wait for the audio playback promise to complete
-          if (audioPlaybackPromiseRef.current) {
-            await audioPlaybackPromiseRef.current;
-            console.log(`[${new Date().toISOString()}] ✅ Audio finished playing`);
-          }
-          
-          // Add a 2-second buffer
-          await new Promise(resolve => setTimeout(resolve, 2000));
-          
-          console.log(`[${new Date().toISOString()}] ✅ Navigating...`);
-          if (data.interviewId) {
-            navigate(`/results/${data.interviewId}`);
-          } else {
-            navigate('/dashboard');
-          }
+          if (audioPlaybackPromiseRef.current) await audioPlaybackPromiseRef.current;
+          await new Promise(r => setTimeout(r, 2000));
+          if (data.interviewId) navigate(`/results/${data.interviewId}`);
+          else navigate('/dashboard');
         })();
         break;
-
       case 'ERROR':
-        console.error(`[${timestamp}] ❌ Error:`, data.message);
         setStatus(`Error: ${data.message}`);
         alert(`Error: ${data.message}`);
         break;
-
-      default:
-        console.log(`[${timestamp}] ⚠️ Unknown message type: ${data.type}`);
     }
   }, [navigate, playAudio]);
 
-  // Handle audio data from microphone (push-to-talk)
   const handleAudioReady = useCallback(async (audioBlob: Blob) => {
-    const timestamp = new Date().toISOString();
-    
     try {
-      console.log(`\n[${timestamp}] 🎤 CLIENT: Audio ready from push-to-talk`);
-      console.log(`[${timestamp}] 📊 Blob size: ${audioBlob.size} bytes`);
-      
-      setIsProcessing(true);
-      setStatus('Processing your answer...');
-      setUserTranscript('Processing...');
-      
-      console.log(`[${timestamp}] 🔄 Converting to base64...`);
+      setIsProcessing(true); setStatus('Processing your answer…'); setUserTranscript('Processing…');
       const base64Audio = await blobToBase64(audioBlob);
-      console.log(`[${timestamp}] ✅ Base64 length: ${base64Audio.length} chars`);
-      console.log(`[${timestamp}] 📤 Sending AUDIO_CHUNK message...`);
-      
-      sendMessageRef.current?.({
-        type: 'AUDIO_CHUNK',
-        audioData: base64Audio,
-        sessionId: sessionIdRef.current
-      });
-      
-      console.log(`[${timestamp}] ✅ Audio chunk sent successfully`);
-    } catch (error) {
-      console.error(`[${timestamp}] ❌ Failed to send audio:`, error);
-      setIsProcessing(false);
-      setStatus('Error sending audio');
+      sendMessageRef.current?.({ type: 'AUDIO_CHUNK', audioData: base64Audio, sessionId: sessionIdRef.current });
+    } catch {
+      setIsProcessing(false); setStatus('Error sending audio');
     }
   }, []);
 
-  const { sendMessage, isConnected } = useWebSocket({
-    onMessage: handleWSMessage,
-  });
-
-  // Store sendMessage in ref for use in callbacks
+  const { sendMessage, isConnected } = useWebSocket({ onMessage: handleWSMessage });
   const sendMessageRef = useRef(sendMessage);
+  useEffect(() => { sendMessageRef.current = sendMessage; }, [sendMessage]);
+
+  const { isRecording, isInitialized: isMicInitialized, initialize: initializeMic, startRecording, stopRecording, cleanup: cleanupMic } = usePushToTalkRecording({ onAudioReady: handleAudioReady });
+  const { isActive: isCameraActive, videoRef, startWebcam, stopWebcam } = useWebcam();
+
   useEffect(() => {
-    sendMessageRef.current = sendMessage;
-  }, [sendMessage]);
-
-  const {
-    isRecording,
-    isInitialized: isMicInitialized,
-    initialize: initializeMic,
-    startRecording,
-    stopRecording,
-    cleanup: cleanupMic
-  } = usePushToTalkRecording({
-    onAudioReady: handleAudioReady
-  });
-
-  const {
-    isActive: isCameraActive,
-    videoRef,
-    startWebcam,
-    stopWebcam,
-  } = useWebcam();
-
-  // Initialize interview when connected
-  useEffect(() => {
-    const timestamp = new Date().toISOString();
-    
     if (isConnected && !hasStartedSetup.current) {
       hasStartedSetup.current = true;
-      
-      console.log(`\n[${timestamp}] 🎬 CLIENT: WebSocket connected, initializing interview...`);
-      setStatus('Connected! Initializing...');
-      
-      // Initialize microphone and webcam
+      setStatus('Connected! Initializing…');
       setTimeout(async () => {
-        console.log(`[${timestamp}] 📹 Starting webcam...`);
         startWebcam();
-        
-        console.log(`[${timestamp}] 🎤 Initializing microphone...`);
-        try {
-          await initializeMic();
-          console.log(`[${timestamp}] ✅ Microphone ready`);
-        } catch (err) {
-          console.error('Failed to initialize microphone:', err);
-        }
-        
-        // Start setup phase
-        console.log(`[${timestamp}] 📤 Sending START_SETUP message...`);
+        try { await initializeMic(); } catch (err) { console.error('Mic init failed:', err); }
         sendMessage({ type: 'START_SETUP' });
-        setIsInitialized(true);
-        setStatus('AI is preparing...');
-        console.log(`[${timestamp}] ✅ Initialization complete`);
+        setIsInitialized(true); setStatus('AI is preparing…');
       }, 500);
     }
   }, [isConnected, sendMessage, startWebcam, initializeMic]);
 
-  // Cleanup on unmount
   useEffect(() => {
-    return () => {
-      console.log(`[${new Date().toISOString()}] 🧹 Cleaning up interview resources...`);
-      cleanupMic();
-      stopWebcam();
-      stopAudio();
-    };
+    return () => { cleanupMic(); stopWebcam(); stopAudio(); };
   }, [cleanupMic, stopWebcam, stopAudio]);
 
-  // Spacebar keyboard shortcut for push-to-talk
   useEffect(() => {
     if (!isInitialized || aiSpeaking || isCompleted || isProcessing) return;
-
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.code === 'Space' && !e.repeat && !isRecording) {
-        e.preventDefault();
-        console.log(`[${new Date().toISOString()}] ⌨️ Spacebar pressed - starting recording`);
-        startRecording();
-      }
-    };
-
-    const handleKeyUp = (e: KeyboardEvent) => {
-      if (e.code === 'Space' && isRecording) {
-        e.preventDefault();
-        console.log(`[${new Date().toISOString()}] ⌨️ Spacebar released - stopping recording`);
-        stopRecording();
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    window.addEventListener('keyup', handleKeyUp);
-
-    return () => {
-      window.removeEventListener('keydown', handleKeyDown);
-      window.removeEventListener('keyup', handleKeyUp);
-    };
+    const keyDown = (e: KeyboardEvent) => { if (e.code === 'Space' && !e.repeat && !isRecording) { e.preventDefault(); startRecording(); } };
+    const keyUp = (e: KeyboardEvent) => { if (e.code === 'Space' && isRecording) { e.preventDefault(); stopRecording(); } };
+    window.addEventListener('keydown', keyDown);
+    window.addEventListener('keyup', keyUp);
+    return () => { window.removeEventListener('keydown', keyDown); window.removeEventListener('keyup', keyUp); };
   }, [isInitialized, aiSpeaking, isCompleted, isProcessing, isRecording, startRecording, stopRecording]);
 
   function blobToBase64(blob: Blob): Promise<string> {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
-      reader.onloadend = () => {
-        const base64 = (reader.result as string).split(',')[1];
-        resolve(base64);
-      };
+      reader.onloadend = () => resolve((reader.result as string).split(',')[1]);
       reader.onerror = reject;
       reader.readAsDataURL(blob);
     });
   }
 
   const handleEndInterview = () => {
-    if (confirm('Are you sure you want to end the interview?')) {
-      sendMessage({ type: 'END_INTERVIEW' });
-    }
+    if (confirm('Are you sure you want to end the interview?')) sendMessage({ type: 'END_INTERVIEW' });
   };
 
+  /* ─── Loading ─────────────────────────────────────────────── */
   if (!isConnected) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-          <p className="mt-4 text-gray-600">Connecting to PrepGenie...</p>
+      <div className="min-h-screen flex items-center justify-center" style={{ background: 'var(--bg-page)' }}>
+        <div className="text-center animate-fade-up">
+          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl mb-5 shadow-card-md" style={{ background: 'var(--bg-card)' }}>
+            <div className="w-8 h-8 border-2 rounded-full animate-spin" style={{ borderColor: 'var(--border)', borderTopColor: '#6366f1' }} />
+          </div>
+          <p className="font-semibold" style={{ color: 'var(--text-primary)' }}>Connecting to PrepGenie…</p>
+          <p className="text-sm mt-1" style={{ color: 'var(--text-tertiary)' }}>Setting up your interview session</p>
         </div>
       </div>
     );
   }
 
+  /* ─── Completed ────────────────────────────────────────────── */
   if (isCompleted) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center max-w-2xl">
-          <div className="bg-green-100 rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-4">
-            <svg className="w-10 h-10 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <div className="min-h-screen flex items-center justify-center p-4" style={{ background: 'var(--bg-page)' }}>
+        <div className="text-center max-w-md animate-scale-in">
+          <div className="inline-flex items-center justify-center w-20 h-20 rounded-full mb-5" style={{ background: 'rgba(74,222,128,.1)' }}>
+            <svg className="w-10 h-10 text-green-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
             </svg>
           </div>
-          <h2 className="text-2xl font-bold text-gray-800 mb-2">Interview Completed!</h2>
-          <p className="text-gray-600 mb-2">{aiText}</p>
-          <p className="text-sm text-gray-500">Redirecting to results...</p>
+          <h2 className="text-2xl font-bold tracking-tight mb-2" style={{ color: 'var(--text-primary)' }}>Interview Complete!</h2>
+          {aiText && <p className="mb-3" style={{ color: 'var(--text-secondary)' }}>{aiText}</p>}
+          <p className="text-sm" style={{ color: 'var(--text-tertiary)' }}>Redirecting to your results…</p>
+          <div className="mt-4 w-9 h-9 border-2 rounded-full animate-spin mx-auto" style={{ borderColor: 'var(--border)', borderTopColor: '#6366f1' }} />
         </div>
       </div>
     );
   }
 
+  /* ─── Main ─────────────────────────────────────────────────── */
   return (
-    <div className="min-h-screen bg-neutral-50">
-      {/* Header */}
-      <header className="bg-white border-b border-neutral-200">
+    <div className="min-h-screen bg-hero-mesh" style={{ background: 'var(--bg-page)' }}>
+      {/* Nav */}
+      <header className="page-header">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <div className="flex items-center gap-4">
-              {progress && (
-                <span className="text-sm font-medium text-neutral-700">
-                  Question {progress.current} <span className="text-neutral-400">/ {progress.total}</span>
-                </span>
-              )}
-            </div>
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2 px-3 py-1.5 bg-neutral-50 rounded-lg">
-                <span className={`w-2 h-2 rounded-full ${aiSpeaking ? 'bg-blue-500 animate-pulse' : isRecording ? 'bg-red-500 animate-pulse' : 'bg-green-500'}`}></span>
-                <span className="text-xs font-medium text-neutral-700">{status}</span>
+            <div className="flex items-center gap-3">
+              <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-brand-600 to-violet-600 flex items-center justify-center">
+                <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                </svg>
               </div>
-              <Button variant="ghost" size="sm" onClick={handleEndInterview}>
-                End Interview
-              </Button>
+              <span className="font-bold text-sm" style={{ color: 'var(--text-primary)' }}>PrepGenie</span>
+            </div>
+
+            <div className="flex items-center gap-3">
+              {/* Progress dots */}
+              {progress && (
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-medium" style={{ color: 'var(--text-tertiary)' }}>Q</span>
+                  <span className="flex items-center gap-0.5">
+                    {Array.from({ length: progress.total }).map((_, i) => (
+                      <span key={i} className={`block h-1.5 w-4 rounded-full transition-colors duration-300 ${i < progress.current ? 'bg-brand-500' : ''
+                        }`} style={i < progress.current ? {} : { background: 'var(--border)' }} />
+                    ))}
+                  </span>
+                  <span className="text-xs font-semibold" style={{ color: 'var(--text-primary)' }}>{progress.current}/{progress.total}</span>
+                </div>
+              )}
+
+              {/* Status pill */}
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-full" style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)' }}>
+                <span className={`w-2 h-2 rounded-full ${aiSpeaking ? 'bg-brand-400 animate-pulse' : isRecording ? 'bg-red-400 animate-pulse' : 'bg-emerald-400'
+                  }`} />
+                <span className="text-xs font-medium" style={{ color: 'var(--text-secondary)' }}>{status}</span>
+              </div>
+
+              <Button variant="ghost" size="sm" onClick={handleEndInterview}>End Interview</Button>
             </div>
           </div>
         </div>
       </header>
 
-      {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Main Interview Area */}
-          <div className="lg:col-span-2 space-y-6">
-            {/* AI Conversation Card */}
-            <div className="card p-8 min-h-[400px]">
-              <div className="flex flex-col items-center justify-center h-full">
-                <Avatar isSpeaking={aiSpeaking} />
-                
-                {/* Conversation */}
-                <div className="mt-12 w-full max-w-2xl space-y-4">
-                  {aiText && (
-                    <div className="bg-blue-50 border border-blue-100 rounded-xl p-5">
-                      <div className="flex items-start gap-3">
-                        <div className="w-6 h-6 bg-blue-600 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
-                          <svg className="w-4 h-4 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                          </svg>
-                        </div>
-                        <div className="flex-1">
-                          <p className="text-xs font-medium text-blue-900 mb-1">PrepGenie</p>
-                          <p className="text-sm text-neutral-800 leading-relaxed">{aiText}</p>
-                        </div>
+
+          {/* Main area */}
+          <div className="lg:col-span-2 space-y-5">
+            {/* AI chat card */}
+            <div className="card p-8 min-h-[380px] flex flex-col items-center">
+              <Avatar isSpeaking={aiSpeaking} />
+              <div className="mt-10 w-full max-w-2xl space-y-4">
+                {aiText && (
+                  <div className="rounded-2xl p-5 animate-fade-up" style={{ background: 'rgba(99,102,241,.08)', border: '1px solid rgba(99,102,241,.18)' }}>
+                    <div className="flex items-start gap-3">
+                      <div className="w-7 h-7 flex-shrink-0 mt-0.5 rounded-lg bg-gradient-to-br from-brand-600 to-violet-600 flex items-center justify-center">
+                        <svg className="w-3.5 h-3.5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                        </svg>
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-[11px] font-semibold mb-1.5 uppercase tracking-wider text-brand-400">PrepGenie AI</p>
+                        <p className="text-sm leading-relaxed" style={{ color: 'var(--text-primary)' }}>{aiText}</p>
                       </div>
                     </div>
-                  )}
-                  
-                  {userTranscript && (
-                    <div className="bg-neutral-50 border border-neutral-200 rounded-xl p-5">
-                      <div className="flex items-start gap-3">
-                        <div className="w-6 h-6 bg-neutral-300 rounded-lg flex items-center justify-center flex-shrink-0 mt-0.5">
-                          <svg className="w-4 h-4 text-neutral-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                          </svg>
-                        </div>
-                        <div className="flex-1">
-                          <p className="text-xs font-medium text-neutral-600 mb-1">You</p>
-                          <p className="text-sm text-neutral-800 leading-relaxed italic">"{userTranscript}"</p>
-                        </div>
+                  </div>
+                )}
+                {userTranscript && (
+                  <div className="rounded-2xl p-5 ml-8 animate-fade-up" style={{ background: 'rgba(255,255,255,.03)', border: '1px solid var(--border)' }}>
+                    <div className="flex items-start gap-3">
+                      <div className="w-7 h-7 flex-shrink-0 mt-0.5 rounded-lg flex items-center justify-center" style={{ background: 'rgba(255,255,255,.08)' }}>
+                        <svg className="w-3.5 h-3.5" style={{ color: 'var(--text-secondary)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                        </svg>
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-[11px] font-semibold mb-1.5 uppercase tracking-wider" style={{ color: 'var(--text-tertiary)' }}>You</p>
+                        <p className="text-sm leading-relaxed italic" style={{ color: 'var(--text-secondary)' }}>"{userTranscript}"</p>
                       </div>
                     </div>
-                  )}
-                </div>
+                  </div>
+                )}
+                {!aiText && !userTranscript && (
+                  <div className="text-center py-6">
+                    <p className="text-sm font-medium" style={{ color: 'var(--text-muted)' }}>Waiting for interview to begin…</p>
+                  </div>
+                )}
               </div>
             </div>
 
-            {/* Push-to-Talk Control */}
+            {/* Push-to-talk */}
             <div className="card p-6">
               <div className="flex flex-col items-center">
-                <p className="text-sm text-neutral-600 mb-6 text-center font-medium">
-                  {aiSpeaking ? 'AI is speaking...' : isProcessing ? 'Processing your answer...' : 'Hold to speak'}
+                <p className="text-sm font-medium mb-6 text-center" style={{ color: 'var(--text-secondary)' }}>
+                  {aiSpeaking ? '🎙️ AI is speaking — please wait'
+                    : isProcessing ? '⏳ Processing your answer…'
+                      : '🎤 Hold the button to speak your answer'}
                 </p>
-                
+
                 <button
                   onMouseDown={startRecording}
                   onMouseUp={stopRecording}
@@ -422,40 +280,33 @@ export default function VoiceInterviewPage() {
                   onTouchStart={startRecording}
                   onTouchEnd={stopRecording}
                   disabled={aiSpeaking || isProcessing || !isMicInitialized}
-                  className={`
-                    w-28 h-28 rounded-full flex items-center justify-center
-                    transition-all duration-200 transform
-                    ${isRecording 
-                      ? 'bg-red-500 scale-110 shadow-lg ring-4 ring-red-100' 
+                  aria-label="Push to talk"
+                  className={[
+                    'w-24 h-24 rounded-full flex items-center justify-center transition-all duration-200',
+                    isRecording
+                      ? 'bg-red-500 scale-105'
                       : aiSpeaking || isProcessing
-                      ? 'bg-neutral-200 cursor-not-allowed'
-                      : 'bg-blue-600 hover:bg-blue-700 hover:scale-105 shadow-md hover:shadow-lg'
-                    }
-                    ${!aiSpeaking && !isProcessing ? 'active:scale-95' : ''}
-                    disabled:opacity-50 disabled:cursor-not-allowed
-                  `}
+                        ? 'cursor-not-allowed opacity-50'
+                        : 'bg-gradient-to-br from-brand-500 to-violet-600 hover:scale-105',
+                    !aiSpeaking && !isProcessing ? 'active:scale-95' : '',
+                    'disabled:opacity-50 disabled:cursor-not-allowed',
+                  ].join(' ')}
+                  style={isRecording ? { boxShadow: '0 0 0 8px rgba(239,68,68,.2)' } : !aiSpeaking && !isProcessing ? { boxShadow: '0 0 28px rgba(99,102,241,.5)' } : { background: 'var(--bg-elevated)' }}
                 >
-                  <svg 
-                    className={`w-14 h-14 text-white ${isRecording ? 'animate-pulse' : ''}`} 
-                    fill="none" 
-                    viewBox="0 0 24 24" 
-                    stroke="currentColor"
-                    strokeWidth={2}
-                  >
-                    <path 
-                      strokeLinecap="round" 
-                      strokeLinejoin="round" 
-                      d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" 
-                    />
+                  <svg className={`w-11 h-11 text-white ${isRecording ? 'animate-pulse' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
                   </svg>
                 </button>
-                
-                <div className="mt-4 text-center">
-                  <p className="text-xs font-medium text-neutral-900">
-                    {isRecording ? 'Recording...' : 'Press and hold'}
+
+                <div className="mt-5 text-center">
+                  <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>
+                    {isRecording ? 'Recording…' : 'Press & hold to speak'}
                   </p>
-                  <p className="text-xs text-neutral-500 mt-1">
-                    Use mic button or <kbd className="px-1.5 py-0.5 bg-neutral-100 border border-neutral-300 rounded text-xs font-mono">SPACE</kbd>
+                  <p className="text-xs mt-1" style={{ color: 'var(--text-tertiary)' }}>
+                    Or use{' '}
+                    <kbd className="px-1.5 py-0.5 rounded text-xs font-mono" style={{ background: 'var(--bg-elevated)', border: '1px solid var(--border)', color: 'var(--text-secondary)' }}>
+                      SPACE
+                    </kbd>
                   </p>
                 </div>
               </div>
@@ -463,82 +314,44 @@ export default function VoiceInterviewPage() {
           </div>
 
           {/* Sidebar */}
-          <div className="lg:col-span-1 space-y-6">
-            {/* Webcam Preview */}
+          <div className="lg:col-span-1 space-y-5">
+            {/* Webcam */}
             <div className="card p-5">
               <div className="flex items-center justify-between mb-3">
-                <h3 className="text-sm font-semibold text-neutral-900">Your Video</h3>
+                <h3 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Your Video</h3>
                 <button
                   type="button"
-                  onClick={() => {
-                    if (isCameraActive) {
-                      stopWebcam();
-                    } else {
-                      startWebcam().catch((err) => console.error('Could not start camera:', err));
-                    }
-                  }}
-                  className={`
-                    inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium
-                    transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2
-                    ${isCameraActive
-                      ? 'bg-neutral-100 text-neutral-700 hover:bg-neutral-200'
-                      : 'bg-blue-100 text-blue-700 hover:bg-blue-200'
-                    }
-                  `}
-                  title={isCameraActive ? 'Turn camera off' : 'Turn camera on'}
+                  onClick={() => { if (isCameraActive) stopWebcam(); else startWebcam().catch(console.error); }}
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold transition-colors"
+                  style={isCameraActive
+                    ? { background: 'rgba(255,255,255,.06)', color: 'var(--text-secondary)', border: '1px solid var(--border)' }
+                    : { background: 'rgba(99,102,241,.12)', color: '#a5b4fc', border: '1px solid rgba(99,102,241,.25)' }}
                 >
-                  {isCameraActive ? (
-                    <>
-                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                      </svg>
-                      Camera on
-                    </>
-                  ) : (
-                    <>
-                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
-                      </svg>
-                      Camera off
-                    </>
-                  )}
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    {isCameraActive ? (
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    ) : (
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" />
+                    )}
+                  </svg>
+                  {isCameraActive ? 'Camera on' : 'Camera off'}
                 </button>
               </div>
-              <WebcamPreview
-                videoRef={videoRef}
-                isActive={isCameraActive}
-                className="aspect-video rounded-lg overflow-hidden"
-              />
+              <WebcamPreview videoRef={videoRef} isActive={isCameraActive} className="aspect-video rounded-xl overflow-hidden" />
             </div>
 
-            {/* Instructions */}
+            {/* How it works */}
             <div className="card p-5">
-              <h3 className="text-sm font-semibold text-neutral-900 mb-3">How it works</h3>
+              <h3 className="text-sm font-semibold mb-4" style={{ color: 'var(--text-primary)' }}>How it works</h3>
               <ul className="space-y-3">
-                <li className="flex items-start gap-2.5 text-sm">
-                  <div className="w-5 h-5 bg-blue-100 rounded-md flex items-center justify-center flex-shrink-0 mt-0.5">
-                    <span className="text-xs font-bold text-blue-600">1</span>
-                  </div>
-                  <span className="text-neutral-700">Listen to the AI question</span>
-                </li>
-                <li className="flex items-start gap-2.5 text-sm">
-                  <div className="w-5 h-5 bg-blue-100 rounded-md flex items-center justify-center flex-shrink-0 mt-0.5">
-                    <span className="text-xs font-bold text-blue-600">2</span>
-                  </div>
-                  <span className="text-neutral-700">Hold mic button to speak</span>
-                </li>
-                <li className="flex items-start gap-2.5 text-sm">
-                  <div className="w-5 h-5 bg-blue-100 rounded-md flex items-center justify-center flex-shrink-0 mt-0.5">
-                    <span className="text-xs font-bold text-blue-600">3</span>
-                  </div>
-                  <span className="text-neutral-700">Release when finished</span>
-                </li>
-                <li className="flex items-start gap-2.5 text-sm">
-                  <div className="w-5 h-5 bg-blue-100 rounded-md flex items-center justify-center flex-shrink-0 mt-0.5">
-                    <span className="text-xs font-bold text-blue-600">4</span>
-                  </div>
-                  <span className="text-neutral-700">AI analyzes and continues</span>
-                </li>
+                {["Listen to the AI interviewer's question", "Hold the mic button (or SPACE) to speak", "Release when you're finished answering", "AI analyzes your answer and continues"].map((step, i) => (
+                  <li key={i} className="flex items-start gap-3 text-sm">
+                    <span className="flex-shrink-0 w-5 h-5 rounded-md flex items-center justify-center text-[10px] font-bold text-brand-400" style={{ background: 'rgba(99,102,241,.15)' }}>
+                      {i + 1}
+                    </span>
+                    <span className="leading-snug" style={{ color: 'var(--text-secondary)' }}>{step}</span>
+                  </li>
+                ))}
               </ul>
             </div>
           </div>

@@ -176,6 +176,6 @@ WebSocket connection management
 
 - Webcam video never leaves the browser
 - Audio is encoded as base64 and sent via WebSocket
-- JWT token stored in localStorage
+- JWT token stored in sessionStorage (session ends when tab/browser is closed)
 - State persisted with Zustand
 - Fully responsive design with TailwindCSS

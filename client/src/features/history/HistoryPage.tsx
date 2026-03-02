@@ -9,183 +9,175 @@ interface Interview {
   interviewType: string;
   status: string;
   createdAt: string;
-  feedback?: {
-    score: number;
-  };
+  feedback?: { score: number };
+}
+
+type FilterType = 'all' | 'completed' | 'in_progress';
+
+function StatusBadge({ status }: { status: string }) {
+  if (status === 'completed') return <span className="badge badge-green">Completed</span>;
+  if (status === 'in_progress') return <span className="badge badge-blue">In Progress</span>;
+  return <span className="badge badge-slate">{status}</span>;
 }
 
 export default function HistoryPage() {
   const navigate = useNavigate();
   const [interviews, setInterviews] = useState<Interview[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [filter, setFilter] = useState<'all' | 'completed' | 'in_progress'>('all');
+  const [filter, setFilter] = useState<FilterType>('all');
 
-  useEffect(() => {
-    fetchInterviews();
-  }, []);
+  useEffect(() => { fetchInterviews(); }, []);
 
   const fetchInterviews = async () => {
     try {
       const response = await interviewAPI.getAll();
       setInterviews(response.data.interviews);
-    } catch (error) {
-      console.error('Failed to fetch interviews:', error);
-    } finally {
-      setIsLoading(false);
-    }
+    } catch (error) { console.error('Failed to fetch:', error); }
+    finally { setIsLoading(false); }
   };
 
-  const filteredInterviews = interviews.filter((interview) => {
-    if (filter === 'all') return true;
-    return interview.status === filter;
-  });
+  const filteredInterviews = interviews.filter((i) => filter === 'all' || i.status === filter);
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'completed':
-        return 'bg-green-100 text-green-700 border border-green-200';
-      case 'in_progress':
-        return 'bg-blue-100 text-blue-700 border border-blue-200';
-      default:
-        return 'bg-neutral-100 text-neutral-700 border border-neutral-200';
-    }
-  };
+  const filters: { label: string; value: FilterType; count: number }[] = [
+    { label: 'All', value: 'all', count: interviews.length },
+    { label: 'Completed', value: 'completed', count: interviews.filter((i) => i.status === 'completed').length },
+    { label: 'In Progress', value: 'in_progress', count: interviews.filter((i) => i.status === 'in_progress').length },
+  ];
 
   return (
-    <div className="min-h-screen bg-neutral-50">
-      {/* Header */}
-      <header className="bg-white border-b border-neutral-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <h1 className="text-lg font-semibold text-neutral-900">Interview History</h1>
-            <Button variant="ghost" size="sm" onClick={() => navigate('/dashboard')}>
-              Dashboard
-            </Button>
+    <div className="min-h-screen bg-hero-mesh" style={{ background: 'var(--bg-page)' }}>
+      <header className="page-header">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            <div className="flex items-center gap-3">
+              <button onClick={() => navigate('/dashboard')} className="inline-flex items-center gap-2 text-sm font-medium transition-colors hover:text-white" style={{ color: 'var(--text-secondary)' }}>
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg>
+                Dashboard
+              </button>
+              <div className="h-4 w-px" style={{ background: 'var(--border)' }} />
+              <h1 className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>Interview History</h1>
+            </div>
+            <Button size="sm" onClick={() => navigate('/interview/voice')}>New Interview</Button>
           </div>
         </div>
       </header>
 
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Filters */}
-        <div className="card p-1 mb-6 inline-flex gap-1">
-          <button
-            onClick={() => setFilter('all')}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-              filter === 'all'
-                ? 'bg-blue-600 text-white shadow-sm'
-                : 'text-neutral-700 hover:bg-neutral-100'
-            }`}
-          >
-            All
-          </button>
-          <button
-            onClick={() => setFilter('completed')}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-              filter === 'completed'
-                ? 'bg-blue-600 text-white shadow-sm'
-                : 'text-neutral-700 hover:bg-neutral-100'
-            }`}
-          >
-            Completed
-          </button>
-          <button
-            onClick={() => setFilter('in_progress')}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-              filter === 'in_progress'
-                ? 'bg-blue-600 text-white shadow-sm'
-                : 'text-neutral-700 hover:bg-neutral-100'
-            }`}
-          >
-            In Progress
-          </button>
+      <main className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+        <div className="mb-8 animate-fade-up">
+          <p className="section-label mb-2">History</p>
+          <h2 className="text-3xl font-bold tracking-tight" style={{ color: 'var(--text-primary)' }}>Your Interviews</h2>
+          <p className="mt-1" style={{ color: 'var(--text-secondary)' }}>{interviews.length} total interview{interviews.length !== 1 ? 's' : ''}</p>
         </div>
 
-        {/* Interview List */}
-        <div className="card p-6">
+        {/* Filter tabs */}
+        <div className="mb-6 animate-fade-up" style={{ animationDelay: '60ms' }}>
+          <div className="inline-flex items-center p-1 rounded-xl gap-1" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
+            {filters.map((f) => (
+              <button
+                key={f.value}
+                onClick={() => setFilter(f.value)}
+                className={[
+                  'flex items-center gap-2 px-4 py-1.5 rounded-lg text-sm font-semibold transition-all duration-200',
+                  filter === f.value ? 'text-white' : 'hover:text-white',
+                ].join(' ')}
+                style={filter === f.value
+                  ? { background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)', boxShadow: '0 2px 8px rgba(99,102,241,.4)' }
+                  : { color: 'var(--text-secondary)' }}
+              >
+                {f.label}
+                <span
+                  className="text-xs px-1.5 py-0.5 rounded-md font-bold"
+                  style={filter === f.value
+                    ? { background: 'rgba(255,255,255,.2)', color: 'rgba(255,255,255,.9)' }
+                    : { background: 'rgba(255,255,255,.06)', color: 'var(--text-tertiary)' }}
+                >
+                  {f.count}
+                </span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* List */}
+        <div className="card overflow-hidden animate-fade-up" style={{ animationDelay: '120ms' }}>
           {isLoading ? (
             <div className="text-center py-16">
-              <div className="inline-block animate-spin rounded-full h-8 w-8 border-2 border-neutral-200 border-t-blue-600"></div>
-              <p className="mt-3 text-sm text-neutral-600">Loading history...</p>
+              <div className="inline-block w-9 h-9 border-2 rounded-full animate-spin" style={{ borderColor: 'var(--border)', borderTopColor: '#6366f1' }} />
+              <p className="mt-3 text-sm font-medium" style={{ color: 'var(--text-tertiary)' }}>Loading history…</p>
             </div>
           ) : filteredInterviews.length === 0 ? (
-            <div className="text-center py-16">
-              <div className="inline-flex items-center justify-center w-16 h-16 bg-neutral-100 rounded-2xl mb-4">
-                <svg
-                  className="w-8 h-8 text-neutral-400"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={1.5}
-                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
-                  />
+            <div className="text-center py-16 px-6">
+              <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl mb-4" style={{ background: 'rgba(255,255,255,.04)' }}>
+                <svg className="w-7 h-7" style={{ color: 'var(--text-muted)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
               </div>
-              <p className="text-neutral-900 font-medium">No interviews found</p>
-              <p className="text-sm text-neutral-500 mt-1">Try adjusting your filters</p>
+              <p className="font-semibold text-base" style={{ color: 'var(--text-primary)' }}>No interviews found</p>
+              <p className="text-sm mt-1" style={{ color: 'var(--text-secondary)' }}>
+                {filter !== 'all' ? 'Try a different filter.' : 'Start your first AI mock interview.'}
+              </p>
             </div>
           ) : (
-            <div className="space-y-3">
-              {filteredInterviews.map((interview) => (
-                <div
-                  key={interview.id}
-                  onClick={() => {
-                    if (interview.status === 'completed') {
-                      navigate(`/results/${interview.id}`);
-                    } else {
-                      navigate(`/interview/${interview.id}`);
-                    }
-                  }}
-                  className="card-hover p-4 cursor-pointer group"
-                >
-                  <div className="flex justify-between items-start gap-4">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-1">
-                        <h3 className="font-medium text-neutral-900 truncate">
-                          {interview.role}
-                        </h3>
-                        <span
-                          className={`px-2 py-0.5 rounded-md text-xs font-medium ${getStatusColor(
-                            interview.status
-                          )}`}
-                        >
-                          {interview.status === 'completed' ? 'Completed' : 'In Progress'}
-                        </span>
-                      </div>
-                      <p className="text-sm text-neutral-600">
-                        {interview.interviewType} Interview
-                      </p>
-                      <p className="text-xs text-neutral-500 mt-2">
-                        {new Date(interview.createdAt).toLocaleDateString('en-US', {
-                          month: 'short',
-                          day: 'numeric',
-                          year: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })}
-                      </p>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      {interview.feedback && (
-                        <div className="text-right">
-                          <div className="text-2xl font-bold text-blue-600">
-                            {interview.feedback.score}
-                          </div>
-                          <div className="text-xs text-neutral-500">Score</div>
+            <ul role="list">
+              {filteredInterviews.map((interview) => {
+                const score = interview.feedback?.score;
+                const scoreColor = score !== undefined ? score >= 75 ? '#4ade80' : score >= 50 ? '#fcd34d' : '#f87171' : undefined;
+                const scoreBg = score !== undefined ? score >= 75 ? 'rgba(74,222,128,.1)' : score >= 50 ? 'rgba(252,211,77,.1)' : 'rgba(248,113,113,.1)' : undefined;
+
+                return (
+                  <li key={interview.id} style={{ borderBottom: '1px solid var(--border)' }}>
+                    <div
+                      onClick={() => {
+                        if (interview.status === 'completed') navigate(`/results/${interview.id}`);
+                        else navigate(`/interview/${interview.id}`);
+                      }}
+                      role="button" tabIndex={0}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          if (interview.status === 'completed') navigate(`/results/${interview.id}`);
+                          else navigate(`/interview/${interview.id}`);
+                        }
+                      }}
+                      className="flex justify-between items-center px-6 py-4 cursor-pointer transition-colors group"
+                      onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--bg-card-hover)')}
+                      onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+                    >
+                      <div className="flex items-center gap-4 min-w-0">
+                        <div className="w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: 'rgba(99,102,241,.12)', border: '1px solid rgba(99,102,241,.2)' }}>
+                          <svg className="w-5 h-5 text-brand-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                            <path strokeLinecap="round" strokeLinejoin="round" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                          </svg>
                         </div>
-                      )}
-                      <svg className="w-5 h-5 text-neutral-400 group-hover:text-neutral-600 transition-colors" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                      </svg>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-semibold text-sm truncate" style={{ color: 'var(--text-primary)' }}>{interview.role}</span>
+                            <StatusBadge status={interview.status} />
+                          </div>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <span className="text-xs" style={{ color: 'var(--text-tertiary)' }}>{interview.interviewType} Interview</span>
+                            <span style={{ color: 'var(--border)' }}>•</span>
+                            <span className="text-xs" style={{ color: 'var(--text-tertiary)' }}>
+                              {new Date(interview.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-4 ml-4">
+                        {score !== undefined && (
+                          <div className="flex flex-col items-end px-3 py-1.5 rounded-xl" style={{ background: scoreBg }}>
+                            <span className="text-xl font-bold leading-none" style={{ color: scoreColor }}>{score}</span>
+                            <span className="text-[10px] font-medium mt-0.5 uppercase tracking-wider" style={{ color: 'var(--text-tertiary)' }}>Score</span>
+                          </div>
+                        )}
+                        <svg className="w-4 h-4" style={{ color: 'var(--text-muted)' }} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                        </svg>
+                      </div>
                     </div>
-                  </div>
-                </div>
-              ))}
-            </div>
+                  </li>
+                );
+              })}
+            </ul>
           )}
         </div>
       </main>

@@ -19,13 +19,19 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// Handle 401 errors (logout)
+// Handle 401 errors (logout and redirect only for protected routes, not login/signup)
 api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      useAuthStore.getState().logout();
-      window.location.href = '/login';
+      const isAuthEndpoint =
+        error.config?.url?.includes('/auth/login') ||
+        error.config?.url?.includes('/auth/signup');
+      // Don't redirect on login/signup 401 — let the form show "Invalid credentials"
+      if (!isAuthEndpoint) {
+        useAuthStore.getState().logout();
+        window.location.href = '/login';
+      }
     }
     return Promise.reject(error);
   }
