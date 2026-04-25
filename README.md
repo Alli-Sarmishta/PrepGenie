@@ -1,8 +1,8 @@
-# AI Voice Interview Simulator
+## AI Voice Interview Simulator
 
 A full-stack web application that simulates real-life interviews using AI. Users can practice interviews with voice interaction, receive real-time questions, and get detailed AI-powered feedback.
 
-# Repository
+## Repository
 
 https://github.com/Alli-Sarmishta/PrepGenie
 
@@ -330,9 +330,19 @@ npm run lint         # Run ESLint
 - [ ] Email notifications
 - [ ] Calendar integration
 
-## Contributing
+## Authors and Contributions
 
-This project is developed for academic research and educational purposes.
+The following contributions were made by each author in the design, development, and implementation of the PrepGenie system:
+
+- **Alli Sarmishta** — Led AI system development, including integration of Large Language Models (LLMs), implementation of WebSocket-based real-time communication, and integration of backend with AI services.
+
+- **Kocheruvu Sankeerthana** — Designed and developed the user interface (UI/UX), implemented frontend architecture using modern web technologies, and ensured a responsive and interactive user experience.
+
+- **Gollapelly Rishwitha** — Developed backend services, designed and implemented APIs, and managed integration between backend and database systems.
+
+- **Bojja Srija** — Contributed to frontend development, implemented frontend-to-backend communication, and supported system integration and testing.
+
+All authors contributed to the overall system design, documentation, and final validation of the work.
 
 ## License
 
