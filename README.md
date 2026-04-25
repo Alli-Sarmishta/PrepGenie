@@ -2,6 +2,14 @@
 
 A full-stack web application that simulates real-life interviews using AI. Users can practice interviews with voice interaction, receive real-time questions, and get detailed AI-powered feedback.
 
+# Repository
+
+https://github.com/Alli-Sarmishta/PrepGenie
+
+## Version
+
+v1.0.0
+
 ## Features
 
 - **Voice-Based Interviews** - Speak naturally with AI interviewer using microphone
@@ -324,11 +332,11 @@ npm run lint         # Run ESLint
 
 ## Contributing
 
-This is a school project. Feel free to fork and modify for your own learning!
+This project is developed for academic research and educational purposes.
 
 ## License
 
-MIT License - Free to use for educational purposes
+This project is licensed under the MIT License.
 
 ## Support
 
