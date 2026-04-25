@@ -1,9 +1,20 @@
 cff-version: 1.2.0
 title: PrepGenie
 message: If you use this software, please cite it.
+
 authors:
   - family-names: Alli
     given-names: Sarmishta
+
+  - family-names: Kocheruvu
+    given-names: Sankeerthana
+
+  - family-names: Gollapelly
+    given-names: Rishwitha
+
+  - family-names: Bojja
+    given-names: Srija
+
 version: 1.0.0
 date-released: 2026
 license: MIT
